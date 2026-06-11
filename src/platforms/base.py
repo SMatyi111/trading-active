@@ -31,9 +31,10 @@ class PlatformMap:
     login_password_input: Optional[UIElement] = None
     login_submit_button: Optional[UIElement] = None
 
-    # Trading
+    # Pair / Asset selection
     pair_selector: Optional[UIElement] = None
     btc_pair_button: Optional[UIElement] = None
+    asset_list_item: Optional[UIElement] = None  # generic list item
 
     # Trade execution
     buy_call_button: Optional[UIElement] = None
@@ -41,19 +42,22 @@ class PlatformMap:
     amount_input: Optional[UIElement] = None
     expiry_selector: Optional[UIElement] = None
     expiry_60s_button: Optional[UIElement] = None
+    payout_display: Optional[UIElement] = None
 
-    # Status
+    # Status / Monitoring
     trade_confirmation_label: Optional[UIElement] = None
     trade_ticket_panel: Optional[UIElement] = None
     trade_result_label: Optional[UIElement] = None
     balance_label: Optional[UIElement] = None
     current_price_label: Optional[UIElement] = None
+    current_pair_label: Optional[UIElement] = None
     countdown_timer: Optional[UIElement] = None
 
     # Demo toggle
     demo_account_toggle: Optional[UIElement] = None
 
-    extra_elements: list[UIElement] = field(default_factory=list)
+    # Overflow — any extra mapped elements keyed by name
+    extra_elements: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         """Serialize map to JSON-serializable dict."""
@@ -63,16 +67,18 @@ class PlatformMap:
             "login_url": self.login_url,
             "mapped_at": self.mapped_at,
         }
-        for field_name in self.__dataclass_fields__:
-            if field_name in ("extra_elements", "platform_name", "url", "login_url", "mapped_at"):
+        for fname in self.__dataclass_fields__:
+            if fname in ("extra_elements", "platform_name", "url", "login_url", "mapped_at"):
                 continue
-            val = getattr(self, field_name)
+            val = getattr(self, fname)
             if val is not None:
-                out[field_name] = {
+                out[fname] = {
                     "selector": val.selector,
                     "element_type": val.element_type,
                     "notes": val.notes,
                 }
+        if self.extra_elements:
+            out["extra_elements"] = self.extra_elements
         return out
 
 

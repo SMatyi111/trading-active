@@ -147,3 +147,11 @@ else:
         """Run arbitrary JS and return result."""
         code = f"print(js({json.dumps(js_code)}))"
         return self._run(code)
+
+    def press_key(self, key: str) -> None:
+        """Press a keyboard key (Escape, Enter, Tab, etc.)."""
+        self._run(f'press_key("{key}")')
+
+    def click_at(self, x: int, y: int) -> None:
+        """Click at screen coordinates."""
+        self._run(f"click_at_xy({x}, {y})")

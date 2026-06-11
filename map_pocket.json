@@ -1,0 +1,71 @@
+{
+  "platform_name": "pocket_option",
+  "url": "https://pocketoption.com/en/cabinet/try-demo/",
+  "login_url": "https://pocketoption.com/en",
+  "mapped_at": "2026-06-11T18:24:19.812209+00:00",
+  "pair_selector": {
+    "selector": ".currencies-block",
+    "element_type": "div",
+    "notes": "Click to open asset list modal"
+  },
+  "btc_pair_button": {
+    "selector": ".alist__label:text='Bitcoin OTC'",
+    "element_type": "span",
+    "notes": "Bitcoin OTC in the asset dropdown \u2014 highest payout (92%)"
+  },
+  "asset_list_item": {
+    "selector": ".alist__item",
+    "element_type": "div",
+    "notes": "Each .alist__item in the dropdown modal"
+  },
+  "buy_call_button": {
+    "selector": ".btn.btn-call",
+    "element_type": "a",
+    "notes": "Green BUY/CALL button, rect (682,272) 140x48"
+  },
+  "buy_put_button": {
+    "selector": ".btn.btn-put",
+    "element_type": "a",
+    "notes": "Red SELL/PUT button, rect (682,328) 140x48"
+  },
+  "amount_input": {
+    "selector": ".block--bet-amount input",
+    "element_type": "input",
+    "notes": "Trade amount input in .block--bet-amount"
+  },
+  "expiry_selector": {
+    "selector": ".block--expiration-inputs .block__control",
+    "element_type": "div",
+    "notes": "Click to open expiry picker modal"
+  },
+  "expiry_60s_button": {
+    "selector": ".dops__timeframes-item:text='+M1'",
+    "element_type": "div",
+    "notes": "1-minute expiry preset (60 seconds)"
+  },
+  "payout_display": {
+    "selector": ".block--payout",
+    "element_type": "div",
+    "notes": "Shows payout % and dollar amount"
+  },
+  "trade_ticket_panel": {
+    "selector": ".deals-list",
+    "element_type": "div",
+    "notes": "Opened/closed trades list"
+  },
+  "balance_label": {
+    "selector": ".right-block",
+    "element_type": "div",
+    "notes": "Header balance \u2014 parse with regex /\\$[\\d,]+\\.?\\d*/"
+  },
+  "current_pair_label": {
+    "selector": ".current-symbol",
+    "element_type": "span",
+    "notes": "Currently selected trading pair"
+  },
+  "extra_elements": {
+    "tutorial": ".tutorial-v1",
+    "tutorial_nav": ".tutorial-v1 .js-change-slide",
+    "inactive_overlay": ".asset-inactive"
+  }
+}
