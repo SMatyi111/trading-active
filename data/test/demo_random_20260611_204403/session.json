@@ -1,0 +1,9 @@
+{
+  "mode": "test",
+  "label": "demo_random",
+  "started_at": "2026-06-11T18:44:03.031315+00:00",
+  "session_dir": "C:\\Users\\stver\\Documents\\Playground\\btc-binary-probe\\data\\test\\demo_random_20260611_204403",
+  "ended_at": "2026-06-11T18:44:27.660100+00:00",
+  "total_rounds": 3,
+  "total_events": 22
+}
