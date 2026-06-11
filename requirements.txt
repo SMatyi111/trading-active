@@ -1,0 +1,13 @@
+# Core
+browser-harness
+
+# Data
+pandas
+numpy
+
+# CLI
+click
+
+# Dev
+pytest
+black
