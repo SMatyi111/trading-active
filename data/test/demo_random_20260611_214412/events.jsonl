@@ -1,0 +1,7 @@
+{"trade_id": "78321438", "kind": "SESSION_START", "timestamp": "2026-06-11T19:44:12.149953+00:00", "message": "Engine init, mode=test", "mode": "test"}
+{"trade_id": "78321438", "kind": "BROWSER_READY", "timestamp": "2026-06-11T19:44:12.149953+00:00", "message": "Connecting to http://127.0.0.1:9222", "mode": "test"}
+{"trade_id": "78321438", "kind": "BROWSER_READY", "timestamp": "2026-06-11T19:44:25.899914+00:00", "message": "Platform ready, setup took 13750ms", "mode": "test"}
+{"trade_id": "9d93901f7292", "kind": "SIGNAL_RECEIVED", "timestamp": "2026-06-11T19:44:25.899914+00:00", "pair": "Bitcoin OTC", "direction": "CALL", "expiry_sec": 60, "amount": 1.0, "round_num": 1, "message": "Signal: CALL Bitcoin OTC $1.0 / 60s", "raw": "random", "mode": "test"}
+{"trade_id": "9d93901f7292", "kind": "TRADE_CLICK_START", "timestamp": "2026-06-11T19:44:25.899914+00:00", "pair": "Bitcoin OTC", "direction": "CALL", "round_num": 1, "message": "Clicking button", "mode": "test"}
+{"trade_id": "9d93901f7292", "kind": "TRADE_CLICK_UI", "timestamp": "2026-06-11T19:44:26.243667+00:00", "round_num": 1, "elapsed_ms": 344.0000000045984, "click_to_ui_ms": 344.0000000045984, "message": "Button clicked, UI responded in 344ms", "mode": "test"}
+{"trade_id": "9d93901f7292", "kind": "TRADE_CONFIRMED", "timestamp": "2026-06-11T19:44:26.744137+00:00", "round_num": 1, "elapsed_ms": 844.0000000045984, "message": "Trade placed on platform", "mode": "test"}

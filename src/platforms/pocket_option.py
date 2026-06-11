@@ -202,12 +202,14 @@ class PocketOption(BasePlatform):
                 # Phase 3: Read closed tab, then switch back to Opened
                 time.sleep(0.5)
                 browser.evaluate("""
-                    const links = document.querySelectorAll('a.flex-centered');
-                    for (const link of links) {
-                        if (link.innerText.trim() === 'Closed') {
-                            link.click(); break;
+                    (function() {
+                        var links = document.querySelectorAll('a.flex-centered');
+                        for (var i = 0; i < links.length; i++) {
+                            if (links[i].innerText.trim() === 'Closed') {
+                                links[i].click(); break;
+                            }
                         }
-                    }
+                    })();
                 """)
                 time.sleep(0.3)
                 closed = browser.evaluate(
@@ -217,12 +219,14 @@ class PocketOption(BasePlatform):
 
                 # Switch back to Opened tab for next round
                 browser.evaluate("""
-                    const links = document.querySelectorAll('a.flex-centered');
-                    for (const link of links) {
-                        if (link.innerText.trim() === 'Opened') {
-                            link.click(); break;
+                    (function() {
+                        var links = document.querySelectorAll('a.flex-centered');
+                        for (var i = 0; i < links.length; i++) {
+                            if (links[i].innerText.trim() === 'Opened') {
+                                links[i].click(); break;
+                            }
                         }
-                    }
+                    })();
                 """)
                 time.sleep(0.3)
 
