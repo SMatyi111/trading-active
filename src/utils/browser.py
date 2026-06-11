@@ -1,9 +1,23 @@
 """Browser harness wrapper — thin abstraction over browser-harness CLI."""
+import ast
 import subprocess
 import json
 import time
-import sys
+import os
 from typing import Optional
+
+
+def _parse(out: str):
+    """Parse browser-harness output: JSON → Python literal → raw string."""
+    if not out or not out.strip():
+        return {}
+    try:
+        return json.loads(out)
+    except (json.JSONDecodeError, ValueError):
+        try:
+            return ast.literal_eval(out)
+        except (ValueError, SyntaxError):
+            return {"raw": out}
 
 
 class Browser:
@@ -21,26 +35,30 @@ class Browser:
             input=code,
             capture_output=True,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             timeout=30,
-            env={**__import__("os").environ, "BU_CDP_URL": self.cdp_url},
+            env={**os.environ, "BU_CDP_URL": self.cdp_url},
         )
         if proc.returncode != 0:
             raise RuntimeError(f"browser-harness error: {proc.stderr.strip()}")
-        return proc.stdout.strip()
+        return proc.stdout.strip() if proc.stdout else ""
 
     def navigate(self, url: str) -> dict:
         """Navigate to URL and return page info."""
         code = f"""
 goto_url("{url}")
 wait_for_load()
+time.sleep(2)
 print(page_info())
 """
         out = self._run(code)
-        return json.loads(out) if out else {}
+        return _parse(out)
 
     def click_text(self, text: str, tag: str = "*") -> dict:
-        """Click element by visible text."""
+        """Click element by visible text and return page info."""
         code = f"""
+import time
 el = find_element_by_text("{text}", '{tag}')
 if el:
     click_element(el)
@@ -48,10 +66,10 @@ if el:
 print(page_info())
 """
         out = self._run(code)
-        return json.loads(out) if out else {}
+        return _parse(out)
 
     def click_selector(self, selector: str) -> dict:
-        """Click a CSS selector."""
+        """Click a CSS selector and return page info."""
         code = f"""
 import time
 el = js(f"document.querySelector('{selector}')")
@@ -61,25 +79,35 @@ if el:
 print(page_info())
 """
         out = self._run(code)
-        return json.loads(out) if out else {}
+        return _parse(out)
 
     def get_elements(self, selector: str) -> list:
         """Return all matching elements' properties."""
         code = f"""
-els = js(f\"\"\"
-    Array.from(document.querySelectorAll('{selector}')).map(el => ({{
-        tag: el.tagName,
-        text: el.innerText?.substring(0,200),
-        id: el.id,
-        class: el.className,
-        rect: el.getBoundingClientRect(),
-        visible: el.offsetParent !== null
-    }}))
-\"\"\")
+import json
+sel = "{selector}"
+js_code = '''
+    Array.from(document.querySelectorAll(''' + json.dumps(sel) + ''')).map(function(el) {{
+        return {{
+            tag: el.tagName,
+            text: (el.innerText || '').substring(0, 200),
+            id: el.id || '',
+            class: el.className || '',
+            rect: el.getBoundingClientRect(),
+            visible: el.offsetParent !== null
+        }};
+    }})
+'''
+els = js(js_code)
 print(json.dumps(els))
 """
         out = self._run(code)
-        return json.loads(out) if out else []
+        parsed = _parse(out)
+        if isinstance(parsed, list):
+            return parsed
+        if isinstance(parsed, dict):
+            return [parsed] if parsed else []
+        return []
 
     def get_text(self, selector: str) -> str:
         """Get text content of element."""
@@ -113,7 +141,7 @@ else:
     def page_info(self) -> dict:
         """Get current page info."""
         out = self._run("print(page_info())")
-        return json.loads(out) if out else {}
+        return _parse(out)
 
     def evaluate(self, js_code: str) -> str:
         """Run arbitrary JS and return result."""

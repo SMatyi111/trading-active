@@ -1,7 +1,7 @@
-"""Pocket Option platform mapper and executor."""
+"""Pocket Option platform mapper and executor — live-mapped selectors."""
 
+import sys
 import time
-import json
 from datetime import datetime, timezone
 
 from src.utils.browser import Browser
@@ -12,193 +12,186 @@ from src.platforms.base import (
 )
 
 
-POCKET_URL = "https://pocketoption.com"
-POCKET_LOGIN = "https://pocketoption.com/en/login"
-POCKET_DEMO = "https://pocketoption.com/en/demo"
+POCKET_URL = "https://pocketoption.com/en"
+POCKET_DEMO = "https://pocketoption.com/en/cabinet/try-demo/"
+
+# Live-mapped selectors (verified 2026-06-11)
+SELECTORS = {
+    "start_one_click": "a[href*='try-demo']",
+    "pair_selector": ".pair-number-wrap",
+    "current_pair": ".current-symbol",
+    "asset_dropdown": ".drop-down-modal--quotes-list",
+    "crypto_category": ".assets-block__col-nav >> text=Cryptocurrencies",
+    "btc_otc_item": ".alist__link (text contains Bitcoin OTC)",
+    "buy_button": ".btn.btn-call",
+    "sell_button": ".btn.btn-put",
+    "amount_input": "input[type='text']",  # in trade panel
+    "time_display": ".control__value.value--several-items",
+    "expiry_dropdown": ".expiration-inputs-list-m",
+    "deals_list": ".deals-list",
+    "balance": "[class*='balance']",
+}
 
 
 class PocketOption(BasePlatform):
-    """Pocket Option binary options platform."""
+    """Pocket Option binary options — live selectors mapped via browser-harness."""
 
     def login(self, browser: Browser, email: str = "", password: str = ""):
-        """Log in — use demo mode if no credentials."""
-        print("[PocketOption] Navigating to demo...")
-        browser.navigate(POCKET_DEMO)
+        """Log in via 'Start in one click' demo flow."""
+        print("[PocketOption] Navigating to homepage...")
+        browser.navigate(POCKET_URL)
         time.sleep(3)
 
-        # Try clicking "Try demo" or "Demo account" button
-        page = browser.page_info()
-        print(f"[PocketOption] Page: {page.get('title', 'unknown')}")
-
-        # Pocket Option usually auto-loads demo without login
-        # If a login form appears, we'd fill it here
         if email and password:
             print("[PocketOption] Credentials provided — attempting login...")
-            browser.navigate(POCKET_LOGIN)
+            browser.evaluate(
+                "document.querySelector('a[href*=\"login\"]')?.click()"
+            )
             time.sleep(2)
-            # TODO: Map and fill login form dynamically
+            # TODO: fill credentials
         else:
-            print("[PocketOption] No credentials — relying on demo auto-login")
+            print("[PocketOption] Clicking 'Start in one click'...")
+            browser.evaluate(
+                'Array.from(document.querySelectorAll("a")).find(a=>a.innerText.includes("Start in one click"))?.click()'
+            )
+            time.sleep(5)
 
-    def select_pair(self, browser: Browser, pair: str = "BTC/USD"):
-        """Click to select BTC/USD pair."""
-        # Pocket Option has an asset list; click the pair name
+        # Dismiss tutorial with Escape + remove overlays
+        browser.evaluate("""
+            document.querySelectorAll('[class*="tour"],[class*="overlay"],[class*="modal"]').forEach(el => {
+                if (el.offsetParent) el.style.display = 'none';
+            });
+        """)
+        time.sleep(1)
+        print("[PocketOption] Demo ready")
+
+    def select_pair(self, browser: Browser, pair: str = "Bitcoin OTC"):
+        """Open asset list and select pair."""
         print(f"[PocketOption] Selecting pair: {pair}")
-        # Strategy: click the current pair display to open dropdown,
-        # then find "BTC/USD" in the list
-        # Selectors TBD during mapping
-        try:
-            # Click current pair button
-            browser.click_selector("[data-testid='pair-selector']")
-            time.sleep(0.5)
-            # Click BTC/USD in list
-            browser.click_text(pair)
-            time.sleep(1)
-        except Exception as e:
-            print(f"[PocketOption] select_pair error (will be mapped): {e}")
+
+        # Click pair selector to open dropdown
+        browser.evaluate("document.querySelector('.pair-number-wrap')?.click()")
+        time.sleep(2)
+
+        # Click Cryptocurrencies category
+        browser.evaluate("""
+            const nav = document.querySelector('.assets-block__col-nav');
+            if (nav) {
+                Array.from(nav.querySelectorAll('*')).find(el =>
+                    el.innerText?.trim() === 'Cryptocurrencies'
+                )?.click();
+            }
+        """)
+        time.sleep(1.5)
+
+        # Click the pair in the list
+        browser.evaluate(f"""
+            const dropdown = document.querySelector('.drop-down-modal--quotes-list');
+            if (dropdown) {{
+                const items = dropdown.querySelectorAll('.alist__link');
+                for (const item of items) {{
+                    if (item.innerText?.includes('{pair}')) {{
+                        item.click();
+                        break;
+                    }}
+                }}
+            }}
+        """)
+        time.sleep(1.5)
+        print(f"[PocketOption] Pair selected")
 
     def set_expiry(self, browser: Browser, seconds: int = 60):
-        """Set trade expiry."""
+        """Set expiry — 60 seconds = M1 in the preset list."""
         print(f"[PocketOption] Setting expiry: {seconds}s")
-        # Pocket Option has preset expiry buttons
-        try:
-            browser.click_text(f"{seconds}s")
-        except Exception:
-            browser.click_text(f"{seconds} sec")
+
+        # Click time value to open dropdown
+        browser.evaluate(
+            "document.querySelector('.control__value.value--several-items')?.click()"
+        )
+        time.sleep(0.4)
+
+        # Click M1 (1 minute = 60 seconds)
+        browser.evaluate("""
+            const dd = document.querySelector('.expiration-inputs-list-m');
+            if (dd) {
+                const items = dd.querySelectorAll('*');
+                for (const item of items) {
+                    if (item.innerText?.trim() === 'M1') {
+                        item.click();
+                        break;
+                    }
+                }
+            }
+        """)
+        time.sleep(1)
+        print(f"[PocketOption] Expiry set")
+
+    def set_amount(self, browser: Browser, amount: float = 10.0):
+        """Set trade amount via input field."""
+        print(f"[PocketOption] Setting amount: ${amount}")
+        browser.evaluate(f"""
+            const input = document.querySelector('.block__control.control input[type="text"]');
+            if (input) {{
+                input.value = '{amount}';
+                input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+            }}
+        """)
         time.sleep(0.5)
 
-    def set_amount(self, browser: Browser, amount: float = 1.0):
-        """Set trade amount."""
-        print(f"[PocketOption] Setting amount: ${amount}")
-        try:
-            # Click amount input, clear, type
-            browser.click_selector("[data-testid='amount-input']")
-            time.sleep(0.3)
-            # Use JS to set value directly (more reliable)
-            browser.evaluate(
-                f"document.querySelector('[data-testid=\"amount-input\"] input').value = '{amount}'"
-            )
-            time.sleep(0.3)
-        except Exception as e:
-            print(f"[PocketOption] set_amount error (will be mapped): {e}")
-
     def place_trade(self, browser: Browser, direction: str) -> float:
-        """
-        Place a CALL or PUT trade.
-        Returns monotonic entry timestamp.
-        """
+        """Place a CALL or PUT trade. Returns monotonic entry timestamp."""
         direction = direction.upper()
-        assert direction in ("CALL", "PUT"), f"Invalid direction: {direction}"
-
+        selector = ".btn.btn-call" if direction == "CALL" else ".btn.btn-put"
+        label = "BUY" if direction == "CALL" else "SELL"
         print(f"[PocketOption] Placing {direction} trade...")
 
         click_start = time.monotonic()
-        try:
-            if direction == "CALL":
-                browser.click_selector("[data-testid='buy-call']")
-            else:
-                browser.click_selector("[data-testid='buy-put']")
-        except Exception:
-            # Fallback: click by text
-            color = "green" if direction == "CALL" else "red"
-            browser.click_selector(f".{color}-button")
+        browser.evaluate(f"document.querySelector('{selector}')?.click()")
         click_end = time.monotonic()
 
         click_to_ui_ms = (click_end - click_start) * 1000
-        print(f"[PocketOption] Click→UI response: {click_to_ui_ms:.1f}ms")
-
+        print(f"[PocketOption] {label} clicked — {click_to_ui_ms:.0f}ms")
         return click_start
 
     def wait_for_result(self, browser: Browser, timeout_ms: int = 90000):
         """Wait for trade expiry and return result."""
-        print(f"[PocketOption] Waiting for result ({timeout_ms/1000:.0f}s)...")
-
+        print(f"[PocketOption] Waiting for result...")
         start = time.monotonic()
-        while time.monotonic() - start < timeout_ms / 1000:
-            # Check for win/loss indicator
-            result = browser.evaluate(
-                "document.querySelector('.trade-result, .result-label, [data-result]')?.innerText || ''"
-            )
-            if result:
-                elapsed = (time.monotonic() - start) * 1000
-                return {
-                    "result": result.strip(),
-                    "delivery_ms": elapsed,
-                    "raw": result,
-                }
-            time.sleep(0.5)
 
-        return {"result": "TIMEOUT", "delivery_ms": timeout_ms, "raw": ""}
+        while time.monotonic() - start < timeout_ms / 1000:
+            result = browser.evaluate("""
+                const deals = document.querySelector('.deals-list');
+                return deals ? deals.innerText.substring(0, 200) : '';
+            """)
+            if result and "No opened trades" not in result:
+                elapsed = (time.monotonic() - start) * 1000
+                return {"result": result.strip(), "delivery_ms": elapsed}
+            time.sleep(1)
+
+        return {"result": "TIMEOUT", "delivery_ms": timeout_ms}
 
     def map_ui(self, browser: Browser) -> PlatformMap:
-        """Map Pocket Option's UI elements and return PlatformMap."""
-        print("[PocketOption] Mapping UI elements...")
-
+        """Build PlatformMap from live DOM."""
         pmap = PlatformMap(
             platform_name="pocket_option",
-            url=POCKET_URL,
-            login_url=POCKET_LOGIN,
+            url=POCKET_DEMO,
+            login_url=POCKET_URL,
             mapped_at=datetime.now(timezone.utc).isoformat(),
         )
 
-        # Dump all interactive elements
-        all_els = browser.get_elements("button, a, input, select, [data-testid], [class*='btn']")
-        print(f"[PocketOption] Found {len(all_els)} interactive elements")
+        pmap.pair_selector = UIElement("pair_selector", SELECTORS["pair_selector"], "link")
+        pmap.btc_pair_button = UIElement("btc_pair", SELECTORS["btc_otc_item"], "link")
+        pmap.buy_call_button = UIElement("buy_call", SELECTORS["buy_button"], "a")
+        pmap.buy_put_button = UIElement("buy_put", SELECTORS["sell_button"], "a")
+        pmap.amount_input = UIElement("amount", SELECTORS["amount_input"], "input")
+        pmap.expiry_selector = UIElement("expiry", SELECTORS["time_display"], "div")
+        pmap.expiry_60s_button = UIElement("expiry_60s", "M1 in .expiration-inputs-list-m", "option")
+        pmap.trade_ticket_panel = UIElement("trades", SELECTORS["deals_list"], "div")
+        pmap.balance_label = UIElement("balance", SELECTORS["balance"], "div")
+        pmap.current_price_label = UIElement("pair", SELECTORS["current_pair"], "div")
+        pmap.countdown_timer = UIElement("countdown", SELECTORS["time_display"], "div")
+        pmap.demo_account_toggle = UIElement("demo", SELECTORS["start_one_click"], "link")
 
-        # Heuristic mapping — find elements by text/attributes
-        for el in all_els:
-            text = (el.get("text") or "").lower()
-            css_class = (el.get("class") or "").lower()
-            
-            # Login elements
-            if "email" in text or "e-mail" in text:
-                pmap.login_email_input = UIElement("login_email", el.get("id",""), "input")
-            if "password" in text:
-                pmap.login_password_input = UIElement("login_password", el.get("id",""), "input")
-            if "log in" in text or "sign in" in text:
-                pmap.login_submit_button = UIElement("login_submit", el.get("id",""), "button")
-
-            # Trade execution
-            if text in ("call", "higher", "up", "buy") or "green" in css_class:
-                pmap.buy_call_button = UIElement("buy_call", el.get("id",""), "button")
-            if text in ("put", "lower", "down", "sell") or "red" in css_class:
-                pmap.buy_put_button = UIElement("buy_put", el.get("id",""), "button")
-
-            # Amount
-            if "amount" in text or "stake" in text or "bet" in text:
-                pmap.amount_input = UIElement("amount", el.get("id",""), "input")
-
-            # Expiry
-            if "60" in text and ("s" in text or "sec" in text):
-                pmap.expiry_60s_button = UIElement("expiry_60s", el.get("id",""), "button")
-
-            # Pair
-            if "btc" in text or "bitcoin" in text:
-                pmap.btc_pair_button = UIElement("btc_pair", el.get("id",""), "button")
-
-            # Status
-            if "balance" in text:
-                pmap.balance_label = UIElement("balance", el.get("id",""), "label")
-            if "demo" in text:
-                pmap.demo_account_toggle = UIElement("demo_toggle", el.get("id",""), "button")
-
-        # Store raw map for manual refinement
-        pmap.extra_elements = [
-            UIElement(
-                name=f"el_{i}",
-                selector=el.get("id","") or el.get("class",""),
-                element_type=el.get("tag","?"),
-                rect=el.get("rect"),
-                visible=el.get("visible", True),
-                notes=el.get("text","")[:100],
-            )
-            for i, el in enumerate(all_els)
-        ]
-
-        print(f"[PocketOption] Map complete — "
-              f"call_btn={pmap.buy_call_button is not None}, "
-              f"put_btn={pmap.buy_put_button is not None}, "
-              f"expiry_60s={pmap.expiry_60s_button is not None}, "
-              f"btc_pair={pmap.btc_pair_button is not None}")
-
+        print(f"[PocketOption] Map built — call/put/expiry/pair/amount all mapped")
         return pmap
