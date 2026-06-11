@@ -1,0 +1,4 @@
+trade_id,round_num,pair,direction,expiry_sec,amount,signal_to_browser_ms,click_to_ui_ms,click_to_confirm_ms,total_settle_ms,result,payout,balance_after,event_count
+3676ec45c30d,1,Bitcoin OTC,CALL,60,1.0,0.0,375.0,,15547.000000005937,LOSS,0.0,$49,960,6
+3407ac3822a1,2,Bitcoin OTC,CALL,60,1.0,0.0,343.99999999732245,,41593.99999999732,LOSS,0.0,$49,950,6
+8028abfc2c43,3,Bitcoin OTC,CALL,60,1.0,0.0,390.99999999598367,,131968.99999999732,TIMEOUT,0,$49,975.50,6
